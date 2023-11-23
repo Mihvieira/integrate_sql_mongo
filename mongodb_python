@@ -1,0 +1,58 @@
+import datetime
+from pprint import pprint
+
+import pymongo
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+
+uri = "mongodb+srv://<usuário>:<senha>@cluster0.dm72x4c.mongodb.net/?retryWrites=true&w=majority"
+
+# Criando um novo cliente para o servidor
+client = MongoClient(uri, server_api=ServerApi('1'))
+
+db = client.test
+collection = db.test_collection
+print(db)
+
+bank = [{
+    'nome': 'Mike',
+    'cpf': 'cpf',
+    'tags': ['Docs_pessoais', 'cpf'],
+    'data': datetime.datetime.utcnow()
+},
+    {
+    'nome': 'Minerva',
+    'cpf': 'cpf',
+    'tags': ['Docs_pessoais', 'cpf'],
+    'data': datetime.datetime.utcnow()}]
+
+# preparando para submeter as infos
+banks = db.banks
+bank_id = banks.insert_many(bank)
+print(bank_id)
+
+print(db.posts.find_one())
+
+#informações em linhas separadas
+pprint(db.posts.find_one())
+
+# print(result.inserted_ids)
+# recuperação final
+# print(db.posts.find_one({'autor': 'Joao'}))
+
+# documentos presentes na coleção posts
+for post in banks.find():
+    pprint(post)
+
+print(banks.count_documents({}))
+print(banks.count_documents({'nome': 'Mike'}))
+
+print(banks.find_one({'tags': 'insert'}))
+
+# recuperando post de maneira ordenada
+for post in banks.find({}).sort('data'):
+    print(post)
+
+result = db.profiles.create_index([('nome', pymongo.ASCENDING)], unique=True)
+
+print(sorted(list(db.profiles.index_information())))
