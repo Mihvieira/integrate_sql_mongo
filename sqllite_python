@@ -1,0 +1,143 @@
+from pprint import pprint
+
+from sqlalchemy.orm import declarative_base, Session
+from sqlalchemy import Column, create_engine, inspect, select, func
+from sqlalchemy import Integer, Float
+from sqlalchemy import String
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
+
+Base2 = declarative_base()
+
+
+class Cliente(Base2):
+    __tablename__ = "Cliente"
+    # atributos
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nome = Column(String)
+    cpf = Column(Integer)
+    endereco = Column(String)
+
+    conta = relationship(
+        "Conta", back_populates="cliente", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f'User(id={self.id}, nome={self.nome}, cpf = {self.cpf}, endereco = {self.endereco}'
+
+
+class Conta(Base2):
+    __tablename__ = 'Conta'
+    # atributos
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tipo = Column(String(30), nullable=False)
+    agência = Column(Integer)
+    número = Column(Integer)
+    saldo = Column(Float)
+    id_cliente = Column(Integer, ForeignKey("Cliente.id"), nullable=False)
+
+    cliente = relationship("Cliente", back_populates="conta")
+
+    def __repr__(self):
+        return (f'Conta(id={self.id}, tipo = {self.tipo}, agência = {self.agência}, '
+                f'número = {self.número}, saldo = {self.saldo}')
+
+
+# conexão com o banco de dados
+engine = create_engine('sqlite://')
+
+# criando as classes como tabelas no banco de dados
+Base2.metadata.create_all(engine)
+
+# investigando o esquema do banco de dados
+inspetor_engine = inspect(engine)
+print(inspetor_engine.has_table('Conta'))
+
+# visualizando os nomes das tabelas
+print(inspetor_engine.get_table_names())
+
+# inserindo os dados fictícios na tabela Clientes
+with Session(engine) as session:
+    stmt1 = Cliente(
+                nome='Juliana',
+                cpf=12345678,
+                endereco='rua 1')
+
+    stmt2 = Cliente(
+                nome='Sandy',
+                cpf=12345679,
+                endereco='rua 2')
+
+
+    stmt3 = Cliente(
+                nome='Patrick',
+                cpf=12345670,
+                endereco='rua 4')
+
+
+    session.add_all([stmt1, stmt2, stmt3])
+
+    session.commit()
+
+# inserindo dados na tabela contas
+with Session(engine) as session:
+    juliana = Conta(
+        tipo='conta corrente',
+        agência='0001',
+        número=1,
+        saldo=0,
+        id_cliente = 1
+    )
+
+    sandy = Conta(
+        tipo='conta corrente',
+        agência='0001',
+        número=2,
+        saldo=100,
+        id_cliente = 2
+
+        )
+    patrick = Conta(
+        tipo='conta poupança',
+        agência='0001',
+        número=3,
+        saldo=1000,
+        id_cliente = 3
+    )
+
+    session.add_all([juliana, sandy, patrick])
+
+    session.commit()
+
+# Consultas
+
+# Recuperando as contas correntes
+statement = select(Conta).where(Conta.tipo == "conta corrente")
+for result in session.scalars(statement):
+    print(result)
+
+# Recuperando cliente com nome específico
+stmt = select(Cliente).where(Cliente.nome == "Juliana")
+for result2 in session.scalars(stmt):
+    print(result2)
+
+
+# Localizando cliente com nome específico
+statement2 = select(Cliente).filter_by(nome="Patrick")
+for result3 in session.scalars(statement2):
+    print(result3)
+
+# lista de clientes
+user_obj = select(Cliente)
+for result4 in session.scalars(user_obj):
+    pprint(result4)
+
+# Recuperando número da conta e nome do cliente
+statement2 = select(Cliente.nome + Conta.tipo).where(Conta.id_cliente == Cliente.id)
+for result5 in session.scalars(statement2):
+    print(result5)
+
+# Contando a quantidade de clientes
+contagem = select(func.count()).select_from(Cliente)
+for result6 in session.scalars(contagem):
+    print(result6)
